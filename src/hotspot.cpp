@@ -36,6 +36,7 @@ Profiler::Profiler() {
 
 Profiler::~Profiler() {
     disableProfile();
+    print_analysis();
 }
 
 void Profiler::setupSignal() {
@@ -65,7 +66,10 @@ void Profiler::disableProfile() {
     if (ret != 0) {
         fprintf(stderr, "failed to disable profiler: %s", strerror(errno));
     }
-    print_analysis();
+}
+
+long Profiler::getTimeInterval() {
+    return m_sampleInterval;
 }
 
 //
@@ -146,7 +150,7 @@ void print_analysis(){
 	}
     }
     printf("\n\n#####################Stat Info#####################\n");
-    printf("[sample rate] %d usecs/time\n", sample_rate);
+    printf("[sample rate] %ld usecs/time\n", _profiler.getTimeInterval());
     for (int i = 0; i < func_count; i++)
         printf("%s\t%f%%\n", func_record[i].name, 100 * func_record[i].percentage);
     printf("#####################Stat Info#####################\n\n\n");

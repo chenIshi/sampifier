@@ -31,7 +31,7 @@ class Profiler {
 
         void enableProfile();
         void disableProfile();
-
+        long getTimeInterval();
     private:
         time_t m_sampleInterval = 10000;
 
