@@ -8,8 +8,11 @@
 #include <stdio.h>
 #include "hotspot.h"
 
-struct itimerval tick; 
-struct itimerval zero;
+// struct itimerval tick; 
+// struct itimerval zero;
+
+#define max(a,b) ((a)>(b)?(a):(b))
+#define min(a,b) ((a)<(b)?(a):(b))
 
 struct func_record {
     char name[1024];
@@ -17,8 +20,8 @@ struct func_record {
     float percentage;
 } func_record[1024]; 
 
+// number of function found
 int func_count = 0; 
-int sample_rate = 0;
 
 void sigHandler(int, siginfo_t*, void*);
 
@@ -88,15 +91,25 @@ void run_sample() {
     unw_cursor_t cursor;
     unw_word_t offset;
     char buffer[1024] = {};
+    // get initial machine-state
     unw_getcontext(&context);
+    // initialize cursor for local unwinding
     unw_init_local(&cursor, &context);
 
     int next_res;
+    for (int i = 0; i < 3; i++) {
+        // advance to next stack frame 
+        if (unw_step(&cursor) <= 0) {
+            break;
+        }
+    }
+    /*
     for (int i = 0; i < 3; i++)
         unw_step(&cursor);
+    */
     buffer[0] = '\0';       
+    // get name of current procedure
     unw_get_proc_name(&cursor, buffer, sizeof(buffer), &offset);
-    //printf("%s\n", buffer);   
     
     bool found = false;
     for (int i = 0; i < func_count; i++) {
@@ -133,25 +146,27 @@ void hot_spot_analysis(int usec) {
 }
 */
 
-void print_analysis(){ 
+void print_analysis(){
     int total_occurrence = 0;
     for (int i = 0; i < func_count; i++)
         total_occurrence += func_record[i].occurrence;
     for (int i = 0; i < func_count; i++) 
         func_record[i].percentage = func_record[i].occurrence / (float) total_occurrence;
 
+    // re-order with occurrence
     for (int i = 0; i < func_count; i++) {
         for (int j = i+1; j < func_count; j++) {
-	    if (func_record[i].percentage > func_record[j].percentage) {
-	        struct func_record tmp = func_record[i];
-		func_record[i] = func_record[j];
-		func_record[j] = tmp;
+            if (func_record[i].percentage < func_record[j].percentage) {
+                struct func_record tmp = func_record[i];
+                func_record[i] = func_record[j];
+                func_record[j] = tmp;
+            }
 	    }
-	}
     }
     printf("\n\n#####################Stat Info#####################\n");
     printf("[sample rate] %ld usecs/time\n", _profiler.getTimeInterval());
-    for (int i = 0; i < func_count; i++)
+    printf("Top 10 (if exist) CPU time-consumed Function:\n");
+    for (int i = 0; i < min(func_count, 10); i++)
         printf("%s\t%f%%\n", func_record[i].name, 100 * func_record[i].percentage);
     printf("#####################Stat Info#####################\n\n\n");
 }
